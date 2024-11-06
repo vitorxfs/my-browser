@@ -14,10 +14,6 @@ class Browser:
       width=WIDTH,
       height=HEIGHT
     )
-    self.font = tkinter.font.Font(
-      family="Inter",
-      size=10,
-    )
     self.canvas.pack()
     self.scroll = 0
     self.window.bind("<Down>", self.__scrolldown)
@@ -35,34 +31,55 @@ class Browser:
 
   def draw(self):
     self.canvas.delete("all")
-    for x, y, c in self.display_list:
+    for x, y, c, font in self.display_list:
       if y > self.scroll + HEIGHT: continue
       if y + VSTEP < self.scroll : continue
-      self.canvas.create_text(x, y - self.scroll, text=c, font=self.font, anchor="nw")
+      self.canvas.create_text(x, y - self.scroll, text=c, font=font, anchor="nw")
 
-  def __layout(self, text):
+  def __layout(self, tokens):
     display_list=[]
     cursor_x, cursor_y = HSTEP, VSTEP
-    for word in text.split():
-      w = self.font.measure(word)
-      if (cursor_x + w > WIDTH - HSTEP) or (word == "\n"):
-        cursor_y += self.font.metrics("linespace") * 1.25
-        cursor_x = HSTEP
-      display_list.append((cursor_x, cursor_y, word))
-      cursor_x += w + self.font.measure(" ")
+    style = "roman"
+    weight = "normal"
+    for tok in tokens:
+      if isinstance(tok, Text):
+        font = tkinter.font.Font(
+          family="Inter",
+          size=10,
+          weight=weight,
+          slant=style
+        )
+        for word in tok.text.split():
+          w = font.measure(word)
+          if (cursor_x + w > WIDTH - HSTEP) or (word == "\n"):
+            cursor_y += font.metrics("linespace") * 1.25
+            cursor_x = HSTEP
+          display_list.append((cursor_x, cursor_y, word, font))
+          cursor_x += w + font.measure(" ")
+      elif tok.tag == "i": style = "italic"
+      elif tok.tag == "/i": style = "roman"
+      elif tok.tag in ["b", "strong"]: weight = "bold"
+      elif tok.tag in ["/b", "/strong"]: weight = "normal"
     return display_list
 
   def __lex(self, body):
-    text=""
+    out = []
+    buffer=""
     in_tag = False
     for c in body:
       if c == "<":
         in_tag = True
+        if buffer: out.append(Text(buffer))
+        buffer = ""
       elif c == ">":
         in_tag = False
-      elif not in_tag:
-        text += c
-    return text
+        out.append(Tag(buffer))
+        buffer = ""
+      else:
+        buffer += c
+    if not in_tag and buffer:
+      out.append(Text(buffer))
+    return out
 
   def __scrolldown(self, e):
     self.scroll += SCROLL_STEP
@@ -78,3 +95,11 @@ class Browser:
     print(delta)
     if delta < 0: self.__scrolldown()
     else: self.__scrollup()
+
+class Text:
+  def __init__(self, text):
+    self.text = text
+
+class Tag:
+  def __init__(self, tag):
+    self.tag = tag
