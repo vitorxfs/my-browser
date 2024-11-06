@@ -1,5 +1,6 @@
 from http_client import HTTP
 import tkinter
+import tkinter.font
 
 WIDTH, HEIGHT = 800, 600
 HSTEP, VSTEP = 9, 18
@@ -12,6 +13,10 @@ class Browser:
       self.window,
       width=WIDTH,
       height=HEIGHT
+    )
+    self.font = tkinter.font.Font(
+      family="Inter",
+      size=10,
     )
     self.canvas.pack()
     self.scroll = 0
@@ -33,17 +38,18 @@ class Browser:
     for x, y, c in self.display_list:
       if y > self.scroll + HEIGHT: continue
       if y + VSTEP < self.scroll : continue
-      self.canvas.create_text(x, y - self.scroll, text=c)
+      self.canvas.create_text(x, y - self.scroll, text=c, font=self.font, anchor="nw")
 
   def __layout(self, text):
     display_list=[]
     cursor_x, cursor_y = HSTEP, VSTEP
-    for c in text:
-      display_list.append((cursor_x, cursor_y, c))
-      cursor_x += HSTEP
-      if cursor_x >= WIDTH - HSTEP:
-        cursor_y += VSTEP
+    for word in text.split():
+      w = self.font.measure(word)
+      if (cursor_x + w > WIDTH - HSTEP) or (word == "\n"):
+        cursor_y += self.font.metrics("linespace") * 1.25
         cursor_x = HSTEP
+      display_list.append((cursor_x, cursor_y, word))
+      cursor_x += w + self.font.measure(" ")
     return display_list
 
   def __lex(self, body):
