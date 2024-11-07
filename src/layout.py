@@ -5,6 +5,8 @@ from lex import Text, Tag
 
 HSTEP, VSTEP = 9, 18
 
+FONTS = {}
+
 sizes = {
   'h1': 16,
   '/h1': 10,
@@ -41,12 +43,7 @@ class Layout:
     self.__flush()
 
   def __token(self, tok):
-    font = tkinter.font.Font(
-      family="Inter",
-      size=self.size,
-      weight=self.weight,
-      slant=self.style
-    )
+    font = self.__get_font(self.size, self.weight, self.style)
     if isinstance(tok, Text):
       for word in tok.text.split():
         self.__word(word, font)
@@ -75,3 +72,11 @@ class Layout:
     self.cursor_y = baseline + 1.25 * max_descent
     self.cursor_x = HSTEP
     self.line = []
+
+  def __get_font(self, size, weight, style):
+    key = (size, weight, style)
+    if key not in FONTS:
+      font = tkinter.font.Font(size=size, weight=weight, slant=style)
+      label = tkinter.Label(font=font)
+      FONTS[key] = (font, label)
+    return FONTS[key][0]
