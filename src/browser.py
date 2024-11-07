@@ -1,10 +1,13 @@
-from http_client import HTTP
 import tkinter
 import tkinter.font
 
-WIDTH, HEIGHT = 800, 600
-HSTEP, VSTEP = 9, 18
+from http_client import HTTP
+from layout import Layout, VSTEP
+from lex import Text, Tag
+
 SCROLL_STEP = 100
+
+WIDTH, HEIGHT = 800, 600
 
 class Browser:
   def __init__(self):
@@ -25,8 +28,8 @@ class Browser:
   def load(self, url):
     http = HTTP(url)
     content = http.request()
-    text = self.__lex(content)
-    self.display_list = self.__layout(text)
+    tokens = self.__lex(content)
+    self.display_list = Layout(tokens, (WIDTH, HEIGHT)).display_list
     self.draw()
 
   def draw(self):
@@ -35,32 +38,6 @@ class Browser:
       if y > self.scroll + HEIGHT: continue
       if y + VSTEP < self.scroll : continue
       self.canvas.create_text(x, y - self.scroll, text=c, font=font, anchor="nw")
-
-  def __layout(self, tokens):
-    display_list=[]
-    cursor_x, cursor_y = HSTEP, VSTEP
-    style = "roman"
-    weight = "normal"
-    for tok in tokens:
-      if isinstance(tok, Text):
-        font = tkinter.font.Font(
-          family="Inter",
-          size=10,
-          weight=weight,
-          slant=style
-        )
-        for word in tok.text.split():
-          w = font.measure(word)
-          if (cursor_x + w > WIDTH - HSTEP) or (word == "\n"):
-            cursor_y += font.metrics("linespace") * 1.25
-            cursor_x = HSTEP
-          display_list.append((cursor_x, cursor_y, word, font))
-          cursor_x += w + font.measure(" ")
-      elif tok.tag == "i": style = "italic"
-      elif tok.tag == "/i": style = "roman"
-      elif tok.tag in ["b", "strong"]: weight = "bold"
-      elif tok.tag in ["/b", "/strong"]: weight = "normal"
-    return display_list
 
   def __lex(self, body):
     out = []
@@ -88,18 +65,3 @@ class Browser:
   def __scrollup(self, e):
     self.scroll -= SCROLL_STEP
     self.draw()
-
-  def __mousewheel(self, e):
-    print("oi")
-    delta = int(e.delta)
-    print(delta)
-    if delta < 0: self.__scrolldown()
-    else: self.__scrollup()
-
-class Text:
-  def __init__(self, text):
-    self.text = text
-
-class Tag:
-  def __init__(self, tag):
-    self.tag = tag
