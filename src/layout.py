@@ -1,31 +1,23 @@
 import tkinter
 import tkinter.font
 
-from lex import Text, Tag
+from parser import Text, Element
 
 HSTEP, VSTEP = 9, 18
 
 FONTS = {}
 
+
 sizes = {
   'h1': 16,
-  '/h1': 10,
   'h2': 14,
-  '/h2': 10,
   'h3': 12,
-  '/h3': 10,
-  'default': 10
+  'default': 10,
 }
 weights = {
-  'strong': 'bold',
-  'b': 'bold',
-  '/strong': 'normal',
-  '/b': 'normal',
   'default': 'normal',
 }
 slants = {
-  'i': 'italic',
-  'i': 'roman',
   'default': 'roman'
 }
 
@@ -39,21 +31,29 @@ class Layout:
     self.size = sizes['default']
     self.width, _ = dimensions
     self.line = []
-    for tok in tokens: self.__token(tok)
+    self.__recurse(tokens)
     self.__flush()
 
-  def __token(self, tok):
-    font = self.__get_font(self.size, self.weight, self.style)
-    if isinstance(tok, Text):
-      for word in tok.text.split():
-        self.__word(word, font)
-    else:
-      if tok.tag in sizes: self.size = sizes[tok.tag]
-      if tok.tag in slants: self.style = slants[tok.tag]
-      if tok.tag in weights: self.weight = weights[tok.tag]
-      if tok.tag in ['br', '/p', '/h1', '/h2', '/h3', '/aside']: self.__flush()
+  def __open_tag(self, tag):
+    if tag == "h1":
+      self.size = 16
 
-  def __word(self, word, font):
+  def __close_tag(self, tag):
+    if tag == "h1":
+      self.size = 10
+
+  def __recurse(self, tree):
+    if isinstance(tree, Text):
+      for word in tree.text.split():
+        self.__word(word)
+    else:
+      self.__open_tag(tree.tag)
+      for child in tree.children:
+        self.__recurse(child)
+      self.__close_tag(tree.tag)
+
+  def __word(self, word):
+    font = self.__get_font(self.size, self.weight, self.style)
     w = font.measure(word)
     if (self.cursor_x + w > self.width - HSTEP):
       self.__flush()
